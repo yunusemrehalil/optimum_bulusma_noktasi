@@ -15,9 +15,9 @@ See `PLAN.md` for the full design.
 
 | Component | Version |
 |-----------|---------|
-| PostgreSQL | 16 |
-| PostGIS | 3.x |
-| pgRouting | 4.x |
+| PostgreSQL | 16.10 |
+| PostGIS | 3.6.2 |
+| pgRouting | 4.0.1 |
 | osm2pgrouting | bundled with PostgreSQL 16 |
 | QGIS (with GDAL/ogr2ogr) | 4.0.3 |
 | Python | 3.12 (matplotlib, pandas, psycopg2) |
@@ -39,8 +39,9 @@ localhost:5432:*:postgres:<password>
 
 ## Run order
 
-Execute from the project root. PostgreSQL binaries are in
-`C:\Program Files\PostgreSQL\16\bin`.
+The `sql/` files can be run with any client: the IntelliJ Database console (used in
+this project) or the `psql` CLI shown below. Run from the project root; PostgreSQL
+binaries are in `C:\Program Files\PostgreSQL\16\bin`.
 
 ```bash
 # Step 0 - database and extensions
@@ -50,7 +51,8 @@ psql -U postgres -d istanbul_gis -f sql/00_setup_extensions.sql
 # Step 1 - schema
 psql -U postgres -d istanbul_gis -f sql/01_schema.sql
 
-# Step 2 - load OSM data (boundary, restaurants, parks), clipped to İstanbul
+# Step 2 - acquire OSM data (QuickOSM/Overpass -> data/raw/, import with ogr2ogr),
+#          then clip boundary + restaurants/parks into the schema tables
 psql -U postgres -d istanbul_gis -f sql/02_load_osm.sql
 
 # Step 3 - generate K random persons
@@ -63,6 +65,7 @@ psql -U postgres -d istanbul_gis -f sql/11_euclidean_validate.sql
 # Steps 6-8 - Variant B: routable graph, network optimum, validation
 osm2pgrouting --f data/raw/istanbul_roads.osm --conf mapconfig.xml \
               --dbname istanbul_gis --username postgres --clean
+psql -U postgres -d istanbul_gis -f sql/20_build_routing.sql      # costs, indexes, snapping helpers
 psql -U postgres -d istanbul_gis -f sql/21_network_optimum.sql
 psql -U postgres -d istanbul_gis -f sql/22_network_validate.sql
 
@@ -77,9 +80,9 @@ python scripts/plot_performance.py
 
 | Step | Description | Status |
 |------|-------------|--------|
-| 0 | Tooling installed | done |
+| — | Tooling installed | done |
 | 0 | Database and extensions | done |
-| 1 | Schema | pending |
+| 1 | Schema | done |
 | 2 | OSM load | pending |
 | 3 | Persons | pending |
 | 4 | Euclidean optimum | pending |
