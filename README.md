@@ -101,9 +101,9 @@ writes `istanbul_boundary` (1) and `candidates` (5369 restaurants, 4017 parks).
 | 0 | Database and extensions | done |
 | 1 | Schema | done |
 | 2 | OSM load | done |
-| 3 | Persons | pending |
-| 4 | Euclidean optimum | pending |
-| 5 | Euclidean validation | pending |
+| 3 | Persons | done |
+| 4 | Euclidean optimum | done |
+| 5 | Euclidean validation | done |
 | 6 | Routable graph | pending |
 | 7 | Network optimum | pending |
 | 8 | Network validation | pending |
