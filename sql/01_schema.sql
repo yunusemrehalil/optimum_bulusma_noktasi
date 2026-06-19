@@ -1,30 +1,33 @@
--- Create the core tables: İstanbul boundary, candidate targets (H), persons (K).
--- All geometry is stored in EPSG:4326 (OSM native); metric distance is computed
--- later by transforming to EPSG:32635 (UTM 35N).
+-- Defines the three core tables used throughout the project: the İstanbul province
+-- boundary, the candidate target points (H), and the person start points (K).
+-- Geometry is stored in EPSG:4326, OpenStreetMap's native coordinate system;
+-- metric distances are produced later by transforming to EPSG:32635 (UTM zone 35N).
 
--- İstanbul province polygon, used to clip OSM data and to place random persons.
+-- The province polygon bounds the study area: it clips incoming OSM data and
+-- constrains where the random person points are placed.
 CREATE TABLE istanbul_boundary (
     id   serial PRIMARY KEY,
     name text,
     geom geometry(MultiPolygon, 4326)
 );
 
--- Candidate target points H (restaurants, parks).
+-- The candidate meeting targets, each restaurant or park reduced to a single point.
 CREATE TABLE candidates (
     id       serial PRIMARY KEY,
-    osm_id   bigint,              -- source OSM id, for traceability
+    osm_id   bigint,                  -- originating OpenStreetMap feature id
     name     text,
-    category text,                -- 'restaurant' or 'park'
+    category text,                    -- 'restaurant' or 'park'
     geom     geometry(Point, 4326)
 );
 
--- Person start points K (generated randomly in step 03).
+-- The person start points, populated in step 03.
 CREATE TABLE persons (
     id   serial PRIMARY KEY,
     geom geometry(Point, 4326)
 );
 
--- Spatial indexes to speed up clipping and nearest-node lookups.
+-- GiST indexes accelerate the geometry comparisons used for clipping and for
+-- nearest-neighbour lookups in later steps.
 CREATE INDEX idx_boundary_geom   ON istanbul_boundary USING gist (geom);
 CREATE INDEX idx_candidates_geom ON candidates        USING gist (geom);
 CREATE INDEX idx_persons_geom    ON persons           USING gist (geom);

@@ -51,12 +51,12 @@ psql -U postgres -d istanbul_gis -f sql/00_setup_extensions.sql
 # Step 1 - schema
 psql -U postgres -d istanbul_gis -f sql/01_schema.sql
 
-# Step 2 - acquire OSM data (QuickOSM/Overpass -> data/raw/, import with ogr2ogr),
+# Step 2 - acquire OSM data via QuickOSM (see "Data acquisition" below),
 #          then clip boundary + restaurants/parks into the schema tables
 psql -U postgres -d istanbul_gis -f sql/02_load_osm.sql
 
-# Step 3 - generate K random persons
-psql -U postgres -d istanbul_gis -v k=10 -f sql/03_generate_persons.sql
+# Step 3 - generate K random persons (K is set inside the script)
+psql -U postgres -d istanbul_gis -f sql/03_generate_persons.sql
 
 # Steps 4-5 - Variant A: Euclidean optimum and validation
 psql -U postgres -d istanbul_gis -f sql/10_euclidean_optimum.sql
@@ -76,6 +76,23 @@ python scripts/plot_performance.py
 # Step 11 - open qgis/project.qgz in QGIS for map output
 ```
 
+## Data acquisition (Step 2)
+
+Source data is fetched in QGIS with the **QuickOSM** plugin (Quick query form,
+`In` = İstanbul) and imported into PostGIS staging tables with **DB Manager**
+(SRID 4326, geometry column `geom`). OSM features occur as points (nodes) and
+polygons (ways/relations), so each query is imported per geometry type:
+
+| QuickOSM query | Staging tables |
+|----------------|----------------|
+| `amenity` = `restaurant` | `stg_restaurants_pt`, `stg_restaurants_mp` |
+| `leisure` = `park` | `stg_parks_pt`, `stg_parks_mp` |
+| `admin_level` = `4` | `stg_boundary_mp` |
+
+`sql/02_load_osm.sql` merges these, reduces every feature to a representative
+interior point (`ST_PointOnSurface`), clips to the boundary (`ST_Within`), and
+writes `istanbul_boundary` (1) and `candidates` (5369 restaurants, 4017 parks).
+
 ## Progress
 
 | Step | Description | Status |
@@ -83,7 +100,7 @@ python scripts/plot_performance.py
 | — | Tooling installed | done |
 | 0 | Database and extensions | done |
 | 1 | Schema | done |
-| 2 | OSM load | pending |
+| 2 | OSM load | done |
 | 3 | Persons | pending |
 | 4 | Euclidean optimum | pending |
 | 5 | Euclidean validation | pending |
