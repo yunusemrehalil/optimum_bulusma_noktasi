@@ -7,3 +7,4 @@ outputs/*
 !outputs/plot_euclidean.png
 !outputs/plot_network.png
 !outputs/plot_comparison.png
+!outputs/qgis_optimum_map.png

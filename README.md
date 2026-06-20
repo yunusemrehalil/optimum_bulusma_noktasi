@@ -88,7 +88,12 @@ python scripts/benchmark.py
 # Step 10 - plots
 python scripts/plot_performance.py
 
-# Step 11 - QGIS maps: open qgis/project.qgz in QGIS for map output
+# Step 11 - QGIS maps. First precompute the map layers (optima H* + routes), then build
+#           the project and export the map PNG with the QGIS-bundled Python.
+psql -U postgres -d istanbul_gis -f sql/30_routes_for_qgis.sql
+"C:\Program Files\QGIS 4.0.3\bin\python-qgis.bat" qgis/build_project.py
+#           -> writes qgis/project.qgz and outputs/qgis_optimum_map.png
+#           (open qgis/project.qgz in the QGIS GUI to explore / re-style interactively)
 
 # Step 12 - report: compile report/rapor.md (Turkish)
 ```
@@ -172,6 +177,25 @@ pgRouting 4.0.1, warm cache):
 - Variant B is ~10²–10⁴× slower than Variant A for the same (K,H); the realism of road
   travel time is the trade-off for that cost.
 
+## Visualization (Step 11)
+
+`sql/30_routes_for_qgis.sql` precomputes three static map layers so QGIS renders quickly:
+`qgis_optimum` (the 4 optima — both variants × min-sum/min-max — as labelled stars),
+`qgis_route_euclidean` (straight person→H* lines for Variant A), and `qgis_route_network`
+(the actual fastest road paths person→H* for Variant B, recovered edge-by-edge with
+`pgr_dijkstra` so they follow real streets and obey one-ways).
+
+`qgis/build_project.py` is a headless PyQGIS script (run with the QGIS-bundled Python) that
+loads these layers plus persons/candidates over an OpenStreetMap basemap, styles them to
+mirror `reference.png` (people = blue dots, candidates = faint grey, H* = red star, road
+route = green, straight route = blue dashed), saves `qgis/project.qgz`, and exports a print
+layout — title, legend, scale bar, north arrow, © OSM attribution — to
+`outputs/qgis_optimum_map.png`. Open the `.qgz` in the QGIS GUI to explore or re-style.
+
+Both min-sum optima are the same central park (id 9102); the map shows the Variant B road
+routes converging on it and, for comparison, the straight-line Variant A routes to the same
+point, plus the two (different) min-max optima.
+
 ## Progress
 
 | Step | Description | Status |
@@ -188,5 +212,5 @@ pgRouting 4.0.1, warm cache):
 | 8 | Network validation | done |
 | 9 | Benchmark | done |
 | 10 | Plots | done |
-| 11 | QGIS maps | pending |
+| 11 | QGIS maps | done |
 | 12 | Report | pending |
