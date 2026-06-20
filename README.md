@@ -86,10 +86,12 @@ python scripts/plot_performance.py
 ```
 
 Note the dependency: `osm2pgrouting` (Step 3) runs **before** persons (Step 4),
-because `03_generate_persons.sql` places people near road vertices. The İstanbul
-province polygon is mostly sea, forest and rural land, so sampling uniformly over its
-whole area would drop most points kilometres from any road; constraining to the road
-network keeps the start points routable and realistic.
+because `03_generate_persons.sql` places people on the routable network — within 250 m
+of a vertex in the graph's largest connected component. The İstanbul province polygon is
+mostly sea, forest and rural land, and ferry-only areas (e.g. Adalar) form separate
+components, so sampling uniformly would otherwise strand people far from any road or on
+an unroutable island; constraining to the main component keeps start points realistic
+and guarantees every person is reachable by road.
 
 ## Data acquisition
 
