@@ -141,6 +141,37 @@ with all referenced nodes) is therefore sent straight to the Overpass API to dow
   restrictions apply. The filter therefore enforces real-world one-way constraints, not
   merely undirected connectivity.
 
+## Performance (Steps 9–10)
+
+`scripts/benchmark.py` measures how each variant's optimum query scales as the number
+of people (K) and candidates (H) grow, over the grid K ∈ {2,10,50,100,500,1000} ×
+H ∈ {2,10,50,100,500}. It never modifies the frozen production tables: it samples K
+routable person-vertices (from `main_component_vertices`, deterministic `md5(id)` order,
+nested samples) and H candidates, and passes them as arrays into queries that mirror
+`10`/`21`. Each cell runs one warm-up (discarded) plus five timed executions; timing is
+the server-side `Execution Time` from `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`. Raw
+per-run rows go to `outputs/benchmarks.csv`; `scripts/plot_performance.py` aggregates to
+the per-cell **median** and writes `plot_euclidean.png`, `plot_network.png`,
+`plot_comparison.png`.
+
+Headline results (median execution time, PostgreSQL 16.10 / PostGIS 3.6.2 /
+pgRouting 4.0.1, warm cache):
+
+| | K=2, H=2 | K=10, H=10 | K=100, H=100 | K=1000, H=500 |
+|---|---|---|---|---|
+| Variant A (Euclidean) | 0.08 ms | 0.19 ms | 6.9 ms | 386 ms |
+| Variant B (road network) | 530 ms | 1021 ms | 6424 ms | 64685 ms |
+
+- **Variant A scales ~linearly in K·H** (the `time vs K·H` panel parallels the linear
+  reference slope), staying sub-second across the whole grid — it is a pure `O(K·H)`
+  in-memory distance enumeration.
+- **Variant B is dominated by K, not K·H**: `pgr_dijkstraCost` runs one full one-to-many
+  Dijkstra over the 305k-edge graph per person, so cost grows roughly linearly in K
+  (~37 s at K=1000) and rises only modestly with H. This is why its `time vs K·H` scatter
+  is far shallower than Variant A's — adding candidates is nearly free, adding people is not.
+- Variant B is ~10²–10⁴× slower than Variant A for the same (K,H); the realism of road
+  travel time is the trade-off for that cost.
+
 ## Progress
 
 | Step | Description | Status |
@@ -155,7 +186,7 @@ with all referenced nodes) is therefore sent straight to the Overpass API to dow
 | 6 | Euclidean validation | done |
 | 7 | Network optimum | done |
 | 8 | Network validation | done |
-| 9 | Benchmark | pending |
-| 10 | Plots | pending |
+| 9 | Benchmark | done |
+| 10 | Plots | done |
 | 11 | QGIS maps | pending |
 | 12 | Report | pending |
