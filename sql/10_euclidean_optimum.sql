@@ -27,14 +27,22 @@ scored AS (
            max(distance_m) AS max_distance_m
     FROM pairs
     GROUP BY id, name, category
+),
+-- Rank every candidate on both objectives.
+ranked AS (
+    SELECT id, name, category, total_distance_m, max_distance_m,
+           rank() OVER (ORDER BY total_distance_m) AS rank_minsum,
+           rank() OVER (ORDER BY max_distance_m)   AS rank_minmax
+    FROM scored
 )
--- Rank by both objectives and return the strongest candidates: rank_minsum = 1 is the
--- min-sum optimum, rank_minmax = 1 is the min-max optimum. Distances shown in km.
+-- Surface both optima in one result: the leaders by min-sum (the headline objective)
+-- and by min-max (the fairness objective). rank_minsum = 1 is the min-sum optimum;
+-- rank_minmax = 1 is the min-max optimum. The two are usually different candidates.
+-- Distances shown in km.
 SELECT id, name, category,
        round((total_distance_m / 1000.0)::numeric, 2) AS total_distance_km,
        round((max_distance_m   / 1000.0)::numeric, 2) AS max_distance_km,
-       rank() OVER (ORDER BY total_distance_m) AS rank_minsum,
-       rank() OVER (ORDER BY max_distance_m)   AS rank_minmax
-FROM scored
-ORDER BY total_distance_m
-LIMIT 10;
+       rank_minsum, rank_minmax
+FROM ranked
+WHERE rank_minsum <= 5 OR rank_minmax <= 5
+ORDER BY rank_minsum, rank_minmax;

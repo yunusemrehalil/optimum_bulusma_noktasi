@@ -18,7 +18,7 @@ See `PLAN.md` for the full design.
 | PostgreSQL | 16.10 |
 | PostGIS | 3.6.2 |
 | pgRouting | 4.0.1 |
-| osm2pgrouting | bundled with PostgreSQL 16 |
+| osm2pgrouting | 3.0.0 (bundled in PostgreSQL 16 bin) |
 | QGIS (with GDAL/ogr2ogr) | 4.0.3 |
 | Python | 3.12 (matplotlib, pandas, psycopg2) |
 
@@ -51,37 +51,52 @@ psql -U postgres -d istanbul_gis -f sql/00_setup_extensions.sql
 # Step 1 - schema
 psql -U postgres -d istanbul_gis -f sql/01_schema.sql
 
-# Step 2 - acquire OSM data via QuickOSM (see "Data acquisition" below),
+# Step 2 - acquire point/boundary OSM data via QuickOSM (see "Data acquisition"),
 #          then clip boundary + restaurants/parks into the schema tables
 psql -U postgres -d istanbul_gis -f sql/02_load_osm.sql
 
-# Step 3 - generate K random persons (K is set inside the script)
+# Step 3 - build the routable road graph. Roads need raw OSM XML, so the saved query
+#          is sent to the Overpass API, then imported with osm2pgrouting. This MUST run
+#          before step 4: person placement depends on the road vertices.
+curl.exe -s --data-urlencode "data@scripts/overpass_roads.overpassql" \
+         "https://overpass.kumi.systems/api/interpreter" -o data/raw/istanbul_roads.osm
+"C:\Program Files\PostgreSQL\16\bin\osm2pgrouting.exe" \
+    --f data/raw/istanbul_roads.osm \
+    --conf "C:\Program Files\PostgreSQL\16\bin\mapconfig_for_cars.xml" \
+    --dbname istanbul_gis --username postgres --host localhost --port 5432 \
+    --password <password> --clean
+
+# Step 4 - generate K random persons near the road network (K, seed set in the script)
 psql -U postgres -d istanbul_gis -f sql/03_generate_persons.sql
 
-# Steps 4-5 - Variant A: Euclidean optimum and validation
+# Step 5 - Variant A: Euclidean optimum and validation
 psql -U postgres -d istanbul_gis -f sql/10_euclidean_optimum.sql
 psql -U postgres -d istanbul_gis -f sql/11_euclidean_validate.sql
 
-# Steps 6-8 - Variant B: routable graph, network optimum, validation
-osm2pgrouting --f data/raw/istanbul_roads.osm --conf mapconfig.xml \
-              --dbname istanbul_gis --username postgres --clean
-psql -U postgres -d istanbul_gis -f sql/20_build_routing.sql      # costs, indexes, snapping helpers
+# Step 6 - Variant B: connectivity check + snapping, network optimum, validation
+psql -U postgres -d istanbul_gis -f sql/20_build_routing.sql      # connectivity + snapping helpers
 psql -U postgres -d istanbul_gis -f sql/21_network_optimum.sql
 psql -U postgres -d istanbul_gis -f sql/22_network_validate.sql
 
-# Steps 9-10 - benchmark and plots
+# Step 7 - benchmark and plots
 python scripts/benchmark.py
 python scripts/plot_performance.py
 
-# Step 11 - open qgis/project.qgz in QGIS for map output
+# Step 8 - open qgis/project.qgz in QGIS for map output
 ```
 
-## Data acquisition (Step 2)
+Note the dependency: `osm2pgrouting` (Step 3) runs **before** persons (Step 4),
+because `03_generate_persons.sql` places people near road vertices. The İstanbul
+province polygon is mostly sea, forest and rural land, so sampling uniformly over its
+whole area would drop most points kilometres from any road; constraining to the road
+network keeps the start points routable and realistic.
 
-Source data is fetched in QGIS with the **QuickOSM** plugin (Quick query form,
-`In` = İstanbul) and imported into PostGIS staging tables with **DB Manager**
-(SRID 4326, geometry column `geom`). OSM features occur as points (nodes) and
-polygons (ways/relations), so each query is imported per geometry type:
+## Data acquisition
+
+**Points and boundary (Step 2)** are fetched in QGIS with the **QuickOSM** plugin
+(Quick query form, `In` = İstanbul) and imported into PostGIS staging tables with
+**DB Manager** (SRID 4326, geometry column `geom`). OSM features occur as points
+(nodes) and polygons (ways/relations), so each query is imported per geometry type:
 
 | QuickOSM query | Staging tables |
 |----------------|----------------|
@@ -92,6 +107,13 @@ polygons (ways/relations), so each query is imported per geometry type:
 `sql/02_load_osm.sql` merges these, reduces every feature to a representative
 interior point (`ST_PointOnSurface`), clips to the boundary (`ST_Within`), and
 writes `istanbul_boundary` (1) and `candidates` (5369 restaurants, 4017 parks).
+
+**Roads (Step 3)** need raw OSM XML, which QuickOSM cannot emit — it converts results
+to GeoJSON/layers and loses the node topology `osm2pgrouting` requires. The saved
+query `scripts/overpass_roads.overpassql` (highway classes motorway…living_street,
+with all referenced nodes) is therefore sent straight to the Overpass API to download
+`data/raw/istanbul_roads.osm`, which `osm2pgrouting` turns into the `ways` /
+`ways_vertices_pgr` routing graph (304,767 edges, 209,818 vertices).
 
 ## Progress
 
@@ -104,7 +126,7 @@ writes `istanbul_boundary` (1) and `candidates` (5369 restaurants, 4017 parks).
 | 3 | Persons | done |
 | 4 | Euclidean optimum | done |
 | 5 | Euclidean validation | done |
-| 6 | Routable graph | pending |
+| 6 | Routable graph | done |
 | 7 | Network optimum | pending |
 | 8 | Network validation | pending |
 | 9 | Benchmark | pending |

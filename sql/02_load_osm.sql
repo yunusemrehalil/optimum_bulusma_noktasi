@@ -4,6 +4,9 @@
 -- to one representative interior point. Only features inside the province polygon
 -- are retained.
 
+-- Make the load repeatable: clear any prior contents before re-populating.
+TRUNCATE candidates, istanbul_boundary RESTART IDENTITY;
+
 -- Store the province boundary as a MultiPolygon; it is the reference geometry for
 -- the clipping step below.
 INSERT INTO istanbul_boundary (name, geom)
@@ -24,8 +27,11 @@ points AS (
 )
 INSERT INTO candidates (osm_id, name, category, geom)
 SELECT osm_id::bigint, name, category, geom
-FROM points
-WHERE ST_Within(geom, (SELECT geom FROM istanbul_boundary LIMIT 1));
+FROM points p
+WHERE EXISTS (
+    SELECT 1 FROM istanbul_boundary b
+    WHERE ST_Within(p.geom, b.geom)
+);
 
 -- Confirm the load by reporting the boundary and per-category candidate counts.
 SELECT count(*) AS boundary_rows FROM istanbul_boundary;

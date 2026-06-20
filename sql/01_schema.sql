@@ -3,6 +3,12 @@
 -- Geometry is stored in EPSG:4326, OpenStreetMap's native coordinate system;
 -- metric distances are produced later by transforming to EPSG:32635 (UTM zone 35N).
 
+-- Drop any existing tables first so the schema rebuilds cleanly on a re-run. CASCADE
+-- also removes objects that depend on them (e.g. the routing snap tables from step 20).
+DROP TABLE IF EXISTS persons CASCADE;
+DROP TABLE IF EXISTS candidates CASCADE;
+DROP TABLE IF EXISTS istanbul_boundary CASCADE;
+
 -- The province polygon bounds the study area: it clips incoming OSM data and
 -- constrains where the random person points are placed.
 CREATE TABLE istanbul_boundary (
