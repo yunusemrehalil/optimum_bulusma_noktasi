@@ -130,7 +130,7 @@ with all referenced nodes) is therefore sent straight to the Overpass API to dow
 | 5 | Euclidean optimum | done |
 | 6 | Euclidean validation | done |
 | 7 | Network optimum | done |
-| 8 | Network validation | pending |
+| 8 | Network validation | done |
 | 9 | Benchmark | pending |
 | 10 | Plots | pending |
 | 11 | QGIS maps | pending |
