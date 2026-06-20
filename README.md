@@ -69,20 +69,28 @@ curl.exe -s --data-urlencode "data@scripts/overpass_roads.overpassql" \
 # Step 4 - generate K random persons near the road network (K, seed set in the script)
 psql -U postgres -d istanbul_gis -f sql/03_generate_persons.sql
 
-# Step 5 - Variant A: Euclidean optimum and validation
+# Step 5 - Variant A: Euclidean optimum
 psql -U postgres -d istanbul_gis -f sql/10_euclidean_optimum.sql
+
+# Step 6 - Variant A: Euclidean validation (small hand-checkable fixture)
 psql -U postgres -d istanbul_gis -f sql/11_euclidean_validate.sql
 
-# Step 6 - Variant B: connectivity check + snapping, network optimum, validation
+# Step 7 - Variant B: network optimum (20 builds the routing/snapping helpers first)
 psql -U postgres -d istanbul_gis -f sql/20_build_routing.sql      # connectivity + snapping helpers
 psql -U postgres -d istanbul_gis -f sql/21_network_optimum.sql
+
+# Step 8 - Variant B: network validation (small hand-checkable fixture)
 psql -U postgres -d istanbul_gis -f sql/22_network_validate.sql
 
-# Step 7 - benchmark and plots
+# Step 9 - benchmark
 python scripts/benchmark.py
+
+# Step 10 - plots
 python scripts/plot_performance.py
 
-# Step 8 - open qgis/project.qgz in QGIS for map output
+# Step 11 - QGIS maps: open qgis/project.qgz in QGIS for map output
+
+# Step 12 - report: compile report/rapor.md (Turkish)
 ```
 
 Note the dependency: `osm2pgrouting` (Step 3) runs **before** persons (Step 4),
@@ -116,6 +124,22 @@ query `scripts/overpass_roads.overpassql` (highway classes motorway…living_str
 with all referenced nodes) is therefore sent straight to the Overpass API to download
 `data/raw/istanbul_roads.osm`, which `osm2pgrouting` turns into the `ways` /
 `ways_vertices_pgr` routing graph (304,767 edges, 209,818 vertices).
+
+## Methodological notes
+
+- **Snapping and the "last-mile" leg.** Network travel cost is vertex-to-vertex time over
+  the road graph; following standard pgRouting practice, the short off-network access leg
+  between a person/candidate point and its nearest graph vertex is *not* added to the cost.
+  Snap distances are small (person snap max 180 m; candidate snap avg 47 m), so this is
+  immaterial for the chosen optima, which all snap tightly. Seven candidate points lie more
+  than 1 km from the routable network (max 2075 m); these are off-network outliers and do
+  not change the min-sum or min-max winners.
+- **The directed reachability filter does real work.** The undirected largest connected
+  component holds 9215 candidate snap vertices, but the *directed* network query ranks only
+  9205: the `HAVING count(DISTINCT person_id) = K` filter drops 10 candidates that are
+  connected in the undirected graph yet unreachable from every person once one-way
+  restrictions apply. The filter therefore enforces real-world one-way constraints, not
+  merely undirected connectivity.
 
 ## Progress
 

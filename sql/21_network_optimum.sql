@@ -3,9 +3,10 @@
 -- the İstanbul road graph. A single pgr_dijkstraCost computes the K×H matrix of fastest-
 -- route costs (seconds) from every person's snap vertex to every candidate's snap vertex;
 -- the costs are then aggregated per candidate into the two objectives. One-way streets
--- are honoured by the directed search over cost_s / reverse_cost_s (osm2pgrouting stores
--- a negative reverse_cost_s where reverse travel is forbidden, which pgRouting reads as
--- "no edge there"). Time is reported in minutes to match the reference figure.
+-- are honoured by the directed search over cost_s / reverse_cost_s: osm2pgrouting stores a
+-- negative reverse_cost_s where reverse travel is forbidden, or a negative cost_s for
+-- reversed (oneway=-1) streets, and pgRouting treats either negative value as an absent
+-- edge in that direction. Time is reported in minutes to match the reference figure.
 
 -- person_nodes (K) and candidate_nodes (H) were snapped to graph vertices in step 20.
 -- Build the whole cost matrix in one call: every person vertex to every candidate vertex.

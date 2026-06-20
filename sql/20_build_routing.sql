@@ -1,8 +1,9 @@
 -- Variant B, step 1: prepare the routable graph for the shortest-path queries.
 -- osm2pgrouting has already built `ways` (the noded edge graph) and `ways_vertices_pgr`
--- (its nodes). Travel time in seconds is stored as cost_s / reverse_cost_s, with one-way
--- streets expressed as a NEGATIVE reverse_cost_s (pgRouting reads a negative cost as "no
--- edge in that direction"), and the straight road length is in length_m. Step 03 has
+-- (its nodes). Travel time in seconds is stored as cost_s / reverse_cost_s. One-way streets
+-- are encoded as a negative reverse_cost_s, or a negative cost_s for reversed (oneway=-1)
+-- streets; pgRouting treats either negative value as an absent edge in that direction. The
+-- straight road length is in length_m. Step 03 has
 -- already materialised `main_component_vertices` (the largest connected component = the
 -- routable network). This script (a) reports the network's coverage and (b) snaps each
 -- person (K) and candidate (H) to a graph vertex for the routing query in step 21.
@@ -27,9 +28,14 @@ CREATE TABLE person_nodes AS
 SELECT p.id AS person_id, n.id AS vid
 FROM persons p
 CROSS JOIN LATERAL (
-    SELECT v.id FROM ways_vertices_pgr v
-    WHERE EXISTS (SELECT 1 FROM main_component_vertices m WHERE m.id = v.id)
-    ORDER BY v.geom <-> p.geom
+    SELECT k.id
+    FROM (
+        SELECT v.id, v.geom FROM ways_vertices_pgr v
+        WHERE EXISTS (SELECT 1 FROM main_component_vertices m WHERE m.id = v.id)
+        ORDER BY v.geom <-> p.geom                                    -- index KNN (coarse, 4326)
+        LIMIT 10
+    ) k
+    ORDER BY ST_Transform(k.geom, 32635) <-> ST_Transform(p.geom, 32635)  -- exact metric
     LIMIT 1
 ) n;
 ALTER TABLE person_nodes ADD PRIMARY KEY (person_id);
@@ -39,8 +45,13 @@ CREATE TABLE candidate_nodes AS
 SELECT c.id AS cand_id, n.id AS vid
 FROM candidates c
 CROSS JOIN LATERAL (
-    SELECT v.id FROM ways_vertices_pgr v
-    ORDER BY v.geom <-> c.geom
+    SELECT k.id
+    FROM (
+        SELECT v.id, v.geom FROM ways_vertices_pgr v
+        ORDER BY v.geom <-> c.geom                                    -- index KNN (coarse, 4326)
+        LIMIT 10
+    ) k
+    ORDER BY ST_Transform(k.geom, 32635) <-> ST_Transform(c.geom, 32635)  -- exact metric
     LIMIT 1
 ) n;
 ALTER TABLE candidate_nodes ADD PRIMARY KEY (cand_id);

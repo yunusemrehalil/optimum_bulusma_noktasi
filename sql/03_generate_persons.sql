@@ -46,17 +46,25 @@ WITH raw AS (
     ) s
 ),
 near AS (
-    -- Exact metric distance (EPSG:32635) to the single nearest MAIN-COMPONENT vertex,
-    -- found with the indexed KNN operator <->. Points whose nearest routable vertex is
-    -- far away (e.g. on Adalar) get a large distance and are dropped by the filter.
+    -- Exact metric distance (EPSG:32635) to the single nearest MAIN-COMPONENT vertex.
+    -- The indexed KNN operator <-> ranks in EPSG:4326 degree-space, so it fetches the 10
+    -- coarse-nearest routable vertices via the GiST index, then the outer ORDER BY re-ranks
+    -- those by true metric distance (EPSG:32635) and keeps the genuine nearest. Points whose
+    -- nearest routable vertex is far away (e.g. on Adalar) get a large distance and are
+    -- dropped by the filter.
     SELECT r.ord, r.geom,
            ST_Distance(ST_Transform(r.geom, 32635), ST_Transform(v.geom, 32635)) AS dist_m
     FROM raw r
     CROSS JOIN LATERAL (
-        SELECT w.geom
-        FROM ways_vertices_pgr w
-        WHERE EXISTS (SELECT 1 FROM main_component_vertices m WHERE m.id = w.id)
-        ORDER BY w.geom <-> r.geom
+        SELECT k.geom
+        FROM (
+            SELECT w.geom
+            FROM ways_vertices_pgr w
+            WHERE EXISTS (SELECT 1 FROM main_component_vertices m WHERE m.id = w.id)
+            ORDER BY w.geom <-> r.geom                                    -- index KNN (coarse, 4326)
+            LIMIT 10
+        ) k
+        ORDER BY ST_Transform(k.geom, 32635) <-> ST_Transform(r.geom, 32635)  -- exact metric
         LIMIT 1
     ) v
 )
@@ -74,9 +82,14 @@ SELECT round(avg(d.dist_m)::numeric, 1) AS avg_dist_m,
        round(max(d.dist_m)::numeric, 1) AS max_dist_m
 FROM persons p
 CROSS JOIN LATERAL (
-    SELECT ST_Distance(ST_Transform(p.geom, 32635), ST_Transform(w.geom, 32635)) AS dist_m
-    FROM ways_vertices_pgr w
-    JOIN main_component_vertices m ON m.id = w.id
-    ORDER BY w.geom <-> p.geom
+    SELECT ST_Distance(ST_Transform(p.geom, 32635), ST_Transform(k.geom, 32635)) AS dist_m
+    FROM (
+        SELECT w.geom
+        FROM ways_vertices_pgr w
+        JOIN main_component_vertices m ON m.id = w.id
+        ORDER BY w.geom <-> p.geom                                    -- index KNN (coarse, 4326)
+        LIMIT 10
+    ) k
+    ORDER BY ST_Transform(k.geom, 32635) <-> ST_Transform(p.geom, 32635)  -- exact metric
     LIMIT 1
 ) d;
