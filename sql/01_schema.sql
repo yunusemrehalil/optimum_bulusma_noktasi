@@ -4,7 +4,8 @@
 -- metric distances are produced later by transforming to EPSG:32635 (UTM zone 35N).
 
 -- Drop any existing tables first so the schema rebuilds cleanly on a re-run. CASCADE
--- also removes objects that depend on them (e.g. the routing snap tables from step 20).
+-- clears anything that later depends on them (foreign keys, views); the derived helper
+-- tables in steps 03/20 manage their own re-creation with DROP ... IF EXISTS.
 DROP TABLE IF EXISTS persons CASCADE;
 DROP TABLE IF EXISTS candidates CASCADE;
 DROP TABLE IF EXISTS istanbul_boundary CASCADE;

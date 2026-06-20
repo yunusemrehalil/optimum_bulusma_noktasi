@@ -124,11 +124,11 @@ with all referenced nodes) is therefore sent straight to the Overpass API to dow
 | — | Tooling installed | done |
 | 0 | Database and extensions | done |
 | 1 | Schema | done |
-| 2 | OSM load | done |
-| 3 | Persons | done |
-| 4 | Euclidean optimum | done |
-| 5 | Euclidean validation | done |
-| 6 | Routable graph | done |
+| 2 | OSM points/boundary load | done |
+| 3 | Routable graph (osm2pgrouting) | done |
+| 4 | Persons | done |
+| 5 | Euclidean optimum | done |
+| 6 | Euclidean validation | done |
 | 7 | Network optimum | pending |
 | 8 | Network validation | pending |
 | 9 | Benchmark | pending |
