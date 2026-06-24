@@ -211,4 +211,4 @@ point, plus the two (different) min-max optima.
 | 9 | Benchmark | done |
 | 10 | Plots | done |
 | 11 | QGIS maps | done |
-| 12 | Report | pending |
+| 12 | Report | done |
