@@ -9,8 +9,6 @@ parks) for **K** people in İstanbul, computed entirely in SQL, using two distan
 Objectives: **min-sum** (minimize total travel, primary) and **min-max** (minimize the
 worst individual travel, secondary).
 
-See `PLAN.md` for the full design.
-
 ## Environment
 
 | Component | Version |
