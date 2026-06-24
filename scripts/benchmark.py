@@ -1,4 +1,4 @@
-"""Phase 7 - Performance benchmarking for the Optimum Buluşma Noktası project.
+"""Step 9 - Performance benchmarking for the Optimum Buluşma Noktası project.
 
 Measures how the two optimum queries scale as the number of people (K) and the
 number of candidate targets (H) grow:
@@ -25,7 +25,7 @@ Methodology (standard PostgreSQL benchmarking practice):
     to the median per cell.
 
 Usage:
-    python scripts/benchmark.py                 # full PLAN grid
+    python scripts/benchmark.py                 # full default grid
     python scripts/benchmark.py --quick         # tiny grid for a smoke test
     python scripts/benchmark.py --runs 7 --kgrid 2,10,50 --hgrid 2,10,50
 """

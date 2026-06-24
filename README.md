@@ -100,7 +100,7 @@ psql -U postgres -d istanbul_gis -f sql/30_routes_for_qgis.sql
 `03_generate_persons.sql` kişileri yol ağına yerleştirir — ağın birbirine bağlı en büyük
 parçasındaki bir düğüme 250 m'den yakın — böylece her kişi yolla erişilebilir olur.
 
-## Depo yapısı
+## Repo yapısı
 
 | Yol | İçerik |
 |-----|--------|

@@ -1,4 +1,4 @@
-"""Phase 7 - Plot the benchmark results produced by benchmark.py.
+"""Step 10 - Plot the benchmark results produced by benchmark.py.
 
 Reads outputs/benchmarks.csv (raw per-run rows), aggregates to the median execution
 time per (variant, K, H) cell, and writes three figures to outputs/:
