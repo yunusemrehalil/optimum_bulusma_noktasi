@@ -17,6 +17,9 @@ header-includes:
   - \captionsetup{font=small}
 ---
 
+**Video:** <https://youtu.be/sK8VXSB-otY>
+**GitHub:** <https://github.com/yunusemrehalil/optimum_bulusma_noktasi>
+
 ## 1. Problem Tanımı
 
 İstanbul'da bir grup **K** kişinin buluşacağı en uygun tek hedefi, bilinen **H** aday noktalar
